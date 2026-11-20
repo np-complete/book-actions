@@ -1,0 +1,13 @@
+name: publish book
+description: publish book
+runs:
+  using: composite
+  steps:
+    - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      with:
+        role-to-assume: arn:aws:iam::009775665146:role/publish-np-complete-book-role
+        aws-region: us-west-2
+    - run: echo "REPO_NAME=`echo ${{ github.repository }} | cut -d '/' -f 2`" >> $GITHUB_ENV
+      shell: bash
+    - run: aws s3 cp book.pdf s3://np-complete-books/pdf/${{ env.REPO_NAME }}.pdf --acl public-read --cache-control "max-age=900"
+      shell: bash

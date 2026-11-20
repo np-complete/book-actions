@@ -1,0 +1,10 @@
+MD_FILES = FileList['*.md']
+RE_FILES = MD_FILES.ext('re')
+
+rule ".re" => ".md" do |t|
+  sh "md2review --render-link-in-footnote #{t.source} > #{t.name}"
+end
+
+task pdf: RE_FILES do
+  sh "review-pdfmaker config.yml"
+end

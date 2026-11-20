@@ -1,0 +1,33 @@
+name: build book
+description: build book
+inputs:
+  config:
+    description: config file
+    required: true
+    default: config.yml
+  working-directory:
+    description: working directory
+    default: .
+runs:
+  using: composite
+  steps:
+    - run: |
+        CLEAN_PATH=$(readlink -f "${{ github.action_path }}")
+        echo "CLEAN_ACTION_PATH=$CLEAN_PATH" >> $GITHUB_ENV
+      shell: bash
+    - run: cp -r "$CLEAN_ACTION_PATH/shares/." "${{ inputs.working-directory }}/"
+      shell: bash
+    - uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
+      with:
+        bundler-cache: true
+        working-directory: ${{ inputs.working-directory }}
+    - run: bundle exec rake convert_md
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+    - run: |
+        sed -i '1i inherit: ["config.common.yml"]' config.yml
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+    - run: docker run --rm -v `pwd`:/work vvakame/review:5.9 /bin/sh -c "cd /work && review-pdfmaker config.yml"
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
