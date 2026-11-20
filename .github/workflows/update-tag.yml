@@ -1,10 +1,12 @@
 name: update major tag
 
 on:
+  schedule:
+    - cron: '0 15 * * *' # 毎日 00:00 JST
   push:
     branches:
-      - master
       - 'v[0-9]*'
+  workflow_dispatch:
 
 jobs:
   tag:
@@ -13,9 +15,21 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Move tag
         env:
-          TAG: ${{ github.ref_name == 'master' && 'v1' || github.ref_name }}
+          TAG: ${{ github.event_name == 'push' && github.ref_name || 'v1' }}
+        shell: bash
         run: |
-          git tag -f "$TAG"
+          git fetch --tags --force origin
+          target_sha=$(git rev-parse HEAD)
+          tag_sha=$(git rev-list -n 1 "$TAG" 2>/dev/null || true)
+
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$target_sha" = "$tag_sha" ]; then
+            echo "Tag $TAG is already up to date; skipping."
+            exit 0
+          fi
+
+          git tag -f "$TAG" "$target_sha"
           git push --force origin "refs/tags/$TAG:refs/tags/$TAG"
